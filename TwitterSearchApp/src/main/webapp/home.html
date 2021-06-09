@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html" charset="ISO-8859-1">
+<title>Home</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<style>
+	
+
+	th, td {
+  		padding: 2px;
+  		float: center;
+	}
+	table {
+    	table-layout: auto;
+    	width: 100%;
+	}
+
+  	.left {
+  		padding: 20px;
+  		float: left;
+  		width: 27%;
+	}
+	.right {
+		padding: 10px;
+		float: right;
+  		width: 73%;
+	}
+	
+	#jstree{
+		height:150px;
+    	overflow-x:auto;
+    	overflow-y:auto;
+	}
+	
+	.jstree-default a { 
+    	white-space:normal !important; height: auto; 
+	}
+	.jstree-anchor {
+    	height: auto !important;
+	}
+	.jstree-default li > ins { 
+    	vertical-align:top; 
+	}
+	.jstree-leaf {
+    	height: auto;
+	}
+	.jstree-leaf a{
+    	height: auto !important;
+	}
+	
+</style>
+</head>
+<body onload="asyncLoadContent()">
+	<!--h3>Welcome! Here is my ontology:</h3-->
+	<!--div class="container"-->
+	<div class="column left">
+	<br>
+	<br>
+		<button type="button" class="btn btn-light" onclick='homePage()'>Clear</button><br><br>
+		<!--input type="text" id="username" placeholder="username" value="test1" size="8">
+		<input type="password" id="password" placeholder="password" value="1test12!" size="8"><br-->
+		<p>Search logic?</p>
+		<form id="myForm" class="form-check form-check-inline">
+  			<input class="form-check-input" type="radio" value="and" name="logic" checked> AND	
+  			<input class="form-check-input" type="radio" value="or" name="logic"> OR<br>
+		</form> 
+		<br>
+		<p>Search with akas and acronyms?</p>
+		<form id="akaForm">
+  			<input class="form-check-input" type="radio" value="yes" name="akalogic"> YES		
+  			<input class="form-check-input" type="radio" value="no" name="akalogic" checked> NO<br>
+		</form><br>
+		<input type="text" class="form-control" id="mykeywords" placeholder="Enter your keywords..."><br>
+		<br>
+		or pick some keywords from the ontology:<br>
+		<br>
+		<div id="jstree">
+        </div>
+        <br>
+        <button type="button" class="btn btn-primary" onclick='nextPage()'>Submit</button><br><br>
+        <div id="data">
+        </div>
+    </div>
+    <div class="column right">
+    	<div id="myResults"></div>
+        <div id="tweets">
+        </div>
+    </div>
+    <!--/div-->
+    <!-- 4 include the jQuery library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script> 
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-slimScroll/1.3.8/jquery.slimscroll.min.js"></script> 
+  <!-- 5 include the minified jstree source -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/jstree.min.js"></script>
+    
+	<script type="text/javascript">
+	var ontUser = document.getElementById("jstree");
+	var myResults = document.getElementById("myResults");
+	var htmlobj = [];
+	var idobj = [];
+	var myids = [];
+	var type = "and";
+	var isChecked=false;
+	var i=0;
+	function asyncLoadContent() { 
+		writeContent("Loading...");
+		initOntology();
+	}
+	
+	function writeContent(data) {
+		ontUser.innerHTML = data;
+	}
+	
+	function initOntology() {
+ 		var HttpClient = function() {
+ 			this.get = function(aUrl, aCallback) {
+ 				var anHttpRequest = new XMLHttpRequest();
+ 				anHttpRequest.onreadystatechange = function() { 
+ 					if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
+ 						aCallback(anHttpRequest.responseText);
+ 					}
+ 				anHttpRequest.open( "GET", aUrl, true ); 
+ 				anHttpRequest.send( null ); 
+ 			}
+ 		}
+ 		var theurl;
+ 		sessionStorage.clear();
+ 		sessionStorage.setItem("items", "");
+ 		sessionStorage.setItem("mykeywords", "");
+ 		sessionStorage.setItem("logic", "and");
+ 		sessionStorage.setItem("akalogic", "no");
+ 		theurl='OntServlet';
+ 		
+ 		var client = new HttpClient();
+ 		client.get(theurl, function(response) { 
+			var response1 = JSON.parse(response);
+			var ont = response1.ontology;
+			ontUser.innerHTML = '';
+			fetchOntology(ont,0);
+			});
+	}
+	
+	function getResults() {
+		/*var username = document.getElementById("username");
+ 		var password = document.getElementById("password");
+ 		
+ 		if (!(username && username.value.trim()) || !(password && password.value.trim())){
+			alert("Please enter username and password");
+			return false;
+		}*/
+ 		
+ 		var myItems = sessionStorage.getItem("items");
+ 		var myKeywords = document.getElementById('mykeywords');
+		if (!(myKeywords && myKeywords.value.trim()) && !myItems){
+			alert("Please type or select some keywords");
+			return false;
+		}
+		var logicType = sessionStorage.getItem("logic");
+ 		var akaLogicType = sessionStorage.getItem("akalogic");
+		
+ 		
+ 		var HttpClient = function() {
+ 			this.get = function(aUrl, aCallback) {
+ 				var anHttpRequest = new XMLHttpRequest();
+ 				anHttpRequest.onreadystatechange = function() { 
+ 					if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
+ 						aCallback(anHttpRequest.responseText);
+ 					}
+ 				anHttpRequest.open( "POST", aUrl, true ); 
+ 				anHttpRequest.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+ 				anHttpRequest.send(JSON.stringify({/*"smedia": "Twitter", "username": username.value.trim(), "password": password.value.trim(), */"items": myItems, "mykeywords": myKeywords.value.trim(), "logic": logicType, "akalogic": akaLogicType}));
+ 			}
+ 		}
+ 		var theurl = 'search';
+ 		
+ 		var client = new HttpClient();
+ 		client.get(theurl, function(response) { 
+ 			console.log(response);
+			var response1 = JSON.parse(response);
+			if(response1['errormessage']){
+ 				var errorMessage = "<h5 align='left'>"+response1.errormessage+"<h5>";
+ 				$('#myResults').html(errorMessage);
+ 				$('#tweets').html("");
+ 			}
+			else{
+			var twitter = response1.tweets;
+			var query = response1.query;
+			var total = response1.total;
+			var logic = response1.logic;
+			var akalogic = response1.akalogic;
+			if((myKeywords && myKeywords.value.trim()) || myItems){
+				var myResults = '';
+				myResults += "<h4 align='left'>"+total+" results for your query: "+query+"<h4><h5 align='left'>logic: "+logic+"<br>akas and acronyms: "+akalogic+"<h5>";
+				$('#myResults').html(myResults);
+			}			
+			var tweets = '';
+			if (twitter.length>0){
+			
+				tweets += '<table class="table table-striped"><thead><tr padding="2px"><th class="text-center" scope="col">user</th><th class="text-center" scope="col">text</th><th class="text-center" scope="col">date</th><th class="text-center" scope="col">query annotation</th></tr></thead><tbody>';
+				for(i=0; i<twitter.length; i++){
+					if (twitter[i]._postPhoto==="")
+						tweets += '<tr align="center"><td>'+twitter[i]._poster+'<br><br><img src="'+twitter[i]._sourceImg+'"></td><td>'+twitter[i]._postText+'</td><td>'+twitter[i]._postDate+'</td><td>'+twitter[i]._keyword+'</td></tr>';
+					else
+						tweets += '<tr align="center"><td>'+twitter[i]._poster+'<br><br><img src="'+twitter[i]._sourceImg+'"></td><td>'+twitter[i]._postText+'<br><img src="'+twitter[i]._postPhoto+'" style="width:150px;height:150px;"></td><td>'+twitter[i]._postDate+'</td><td>'+twitter[i]._keyword+'</td></tr>';
+				}
+				tweets += '</tbody></table>';
+ 			}
+			$('#tweets').html(tweets);
+			}
+ 		});
+	
+	}
+	
+	function nextPage(){
+		isChecked=true;
+		//location.replace("home.html");
+		getResults();
+		$('html, body').animate({ scrollTop: 0 }, 'fast');
+	}
+	
+	function homePage(){
+		sessionStorage.clear();
+		location.replace("home.html");
+	}
+	
+	function searchfunc(){
+		
+	}
+	
+	window.onbeforeunload = function(event)
+    {
+		if(!isChecked) sessionStorage.clear();
+		
+    };
+	
+	function fetchOntology(aSubs,marg){
+		$(function () {
+			$('#jstree').jstree({
+		    	  "core" : {
+		    		    "data" : aSubs
+		    		  },
+		    		  "checkbox" : {
+		    		    "keep_selected_style" : false,
+		    		    "three_state" : false
+		    		  },
+		    		  "plugins" : [ "wholerow", "checkbox" ]
+		    		});
+			
+			$('#jstree').on("select_node.jstree",
+   			     function(evt, data){
+   	          var node_id   = (data.node.text); // element id
+   	          var content = $("#"+data.node.id).attr("content"); // get value of element attribute
+   	          idobj.push(node_id);
+   	          myids.push(data.node.id);
+   	       	  sessionStorage.setItem("items", myids);
+   	          if(idobj.length===1) htmlobj.push("");
+   	          htmlobj.push("<p>"+content+"</p>");
+   	          var htmldata="";
+   	          for(j=0; j<htmlobj.length; j++){
+   	        	  htmldata += htmlobj[j];
+   	          }
+   	          $('#data').html(htmldata);
+   	     }
+		    	);
+			
+			
+			
+			$('#myForm input').on('change', function() {
+				   sessionStorage.setItem("logic", $('input[name=logic]:checked', '#myForm').val());
+			});
+			
+			$('#akaForm input').on('change', function() {
+				   sessionStorage.setItem("akalogic", $('input[name=akalogic]:checked', '#akaForm').val());
+			});
+			
+			$('#jstree').on("deselect_node.jstree",
+					function(evt, data){
+				var node_id   = (data.node.text); // element id
+				for(j=0; j<htmlobj.length; j++){
+					if(node_id === idobj[j]){
+						idobj.splice(j,1);
+						myids.splice(j,1);
+						sessionStorage.setItem("items", myids);
+						htmlobj.splice(j+1,1);
+						break;
+					}
+				}
+				if(idobj.length===0) htmlobj.splice(0,1);
+				var htmldata="";
+	   	          for(j=0; j<htmlobj.length; j++){
+	   	        	  htmldata += htmlobj[j];
+	   	          }
+	   	          $('#data').html(htmldata);
+			});
+		});
+	}
+	</script>
+</body>
+</html>
